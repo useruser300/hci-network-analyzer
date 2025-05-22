@@ -113,8 +113,8 @@ Zusätzliche Optionen / Additional controls:
 
 ## Beispieldaten / Example Data
 
-Im Ordner `datasets-testen/` befinden sich Beispieldatensätze aus:  
-The `datasets-testen/` folder contains datasets from:
+Im Ordner `datasets/` befinden sich Beispieldatensätze aus:  
+The `datasets/` folder contains datasets from:
 
 - Topology Zoo (`.graphml`)
 - SNDlib (`.xml`)
@@ -123,3 +123,13 @@ The `datasets-testen/` folder contains datasets from:
 
 Diese können direkt in der GUI importiert werden.  
 These can be directly imported into the application for testing and analysis.
+
+## GUI-Ansicht im Dark Mode
+
+![GUI im Dark Mode](screenshots/new1.png)
+
+## Analyseansicht mit Balkendiagrammen
+
+![Analyseansicht](screenshots/new1.png)
+
+
