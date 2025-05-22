@@ -3,7 +3,6 @@ import shutil
 from PyQt5.QtWidgets import (
     QWidget, QPushButton, QLabel, QVBoxLayout, QFileDialog, QHBoxLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QMenu
-
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from backend import pipeline
@@ -34,30 +33,27 @@ class UploadPanel(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.uploaded_files = []
+        self.allowed_extensions = [".graphml", ".xml", ".cch", ".txt"]
+
         self.expanded_width = 320
         self.collapsed_width = 40
         self.expanded = True
 
-        # Drag-&-Drop aktivieren soll noch datein validiern machen 
         self.setAcceptDrops(True)
 
-        # Hauptlayout
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Toggle-Button
         self.toggle_button = QPushButton("<<")
         self.toggle_button.setObjectName("toggleButton")
         self.toggle_button.setFixedWidth(40)
         self.toggle_button.clicked.connect(self.toggle_panel)
         self.main_layout.addWidget(self.toggle_button, 0, Qt.AlignTop)
 
-        # Content-Widget
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(5, 5, 5, 5)
 
-        # Button-Bereich
         button_layout = QHBoxLayout()
         self.upload_button = QPushButton("📂 Datei hochladen")
         self.upload_button.setObjectName("uploadButton")
@@ -69,11 +65,9 @@ class UploadPanel(QWidget):
         button_layout.addWidget(self.analyze_button)
         self.content_layout.addLayout(button_layout)
 
-        # Status-Label
         self.status_label = QLabel("Status: Keine Datei hochgeladen.")
         self.content_layout.addWidget(self.status_label)
 
-        # Tabelle der hochgeladenen Dateien
         self.files_table = QTableWidget()
         self.files_table.setColumnCount(3)
         self.files_table.setHorizontalHeaderLabels(["Dateiname", "Quelle", "Status"])
@@ -90,8 +84,19 @@ class UploadPanel(QWidget):
         self.content_layout.addWidget(self.files_table)
         self.files_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.files_table.customContextMenuRequested.connect(self.show_context_menu)
-        
+
+        self.drop_overlay = QLabel("⇩ Ziehe Dateien per Drag & Drop", self.files_table.viewport())
+        self.drop_overlay.setAlignment(Qt.AlignCenter)
+        self.drop_overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.drop_overlay.hide()
+
+        self.drop_overlay.setGeometry(0, 0, self.files_table.viewport().width(), self.files_table.viewport().height())
+        self.files_table.viewport().installEventFilter(self)
+
+
         self.main_layout.addWidget(self.content_widget, 1)
+
+        self.update_overlay_visibility()
 
     def toggle_panel(self):
         if self.parent and hasattr(self.parent, "handle_toggle_sidebar"):
@@ -120,6 +125,7 @@ class UploadPanel(QWidget):
                     self.status_label.setText(f"⚠ Fehler beim Kopieren von {base_name}: {e}")
                     return
             self.status_label.setText(f"✅ {len(files)} Datei(en) erfolgreich gespeichert.")
+            self.update_overlay_visibility() 
 
     def add_file_to_table(self, filename, source, status):
         row = self.files_table.rowCount()
@@ -127,6 +133,7 @@ class UploadPanel(QWidget):
         self.files_table.setItem(row, 0, QTableWidgetItem(filename))
         self.files_table.setItem(row, 1, QTableWidgetItem(source))
         self.files_table.setItem(row, 2, QTableWidgetItem(status))
+        self.update_overlay_visibility() 
 
     def start_analysis(self):
         if not self.uploaded_files:
@@ -147,11 +154,16 @@ class UploadPanel(QWidget):
             self.parent.single_graph_tab.analysis_section.load_analysis_results()
         self.uploaded_files.clear()
 
-    # Gemeinsame Drag-&-Drop-Logik auslagern
     def handle_dropped_files(self, file_paths):
         destination_folder = "temp_uploads"
         os.makedirs(destination_folder, exist_ok=True)
+        valid_files = []
+
         for src in file_paths:
+            ext = os.path.splitext(src)[1].lower()
+            if ext not in self.allowed_extensions:
+                continue  
+
             name = os.path.basename(src)
             dst = os.path.join(destination_folder, name)
             try:
@@ -159,25 +171,27 @@ class UploadPanel(QWidget):
                 self.uploaded_files.append(dst)
                 quelle = guess_data_source_by_extension(name)
                 self.add_file_to_table(name, quelle, "Bereit")
+                valid_files.append(name)
             except Exception as e:
                 self.status_label.setText(f"⚠ Fehler: {e}")
                 return
-        self.status_label.setText(f"✅ {len(file_paths)} Datei(en) bereit zur Analyse.")
 
-    # Drag-Event erlauben
+        if valid_files:
+            self.status_label.setText(f"✅ {len(valid_files)} gültige Datei(en) bereit zur Analyse.")
+        else:
+            self.status_label.setText("⚠ Keine gültigen Dateien (erlaubt: .graphml, .xml, .cch, .txt)")
+        
+        self.update_overlay_visibility()
+
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
-    # Drop-Event verarbeiten
     def dropEvent(self, event):
         paths = [u.toLocalFile() for u in event.mimeData().urls()]
         self.handle_dropped_files(paths)
 
-
-
-
-        # Kontextmenü zum Löschen
     def show_context_menu(self, pos):
         row = self.files_table.rowAt(pos.y())
         if row < 0:
@@ -189,9 +203,7 @@ class UploadPanel(QWidget):
             self.delete_file(row)
 
     def delete_file(self, row):
-        # Pfad aus Liste entfernen
         filename = self.files_table.item(row, 0).text()
-        # finde index in uploaded_files anhand des Basisnamens
         for p in self.uploaded_files:
             if os.path.basename(p) == filename:
                 try:
@@ -200,6 +212,21 @@ class UploadPanel(QWidget):
                     pass
                 self.uploaded_files.remove(p)
                 break
-        # Zeile aus Tabelle löschen
         self.files_table.removeRow(row)
         self.status_label.setText(f"🗑️ '{filename}' gelöscht.")
+        self.update_overlay_visibility()  
+
+    def update_overlay_visibility(self):
+        if self.files_table.rowCount() == 0:
+            self.drop_overlay.show()
+        else:
+            self.drop_overlay.hide()
+
+    def resize_overlay(self, event):
+        self.drop_overlay.setGeometry(0, 0, self.files_table.viewport().width(), self.files_table.viewport().height())
+
+    def eventFilter(self, source, event):
+        if source == self.files_table.viewport() and event.type() == event.Resize:
+            self.drop_overlay.setGeometry(0, 0, self.files_table.viewport().width(), self.files_table.viewport().height())
+        return super().eventFilter(source, event)
+
