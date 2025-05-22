@@ -130,6 +130,6 @@ These can be directly imported into the application for testing and analysis.
 
 ## Analyseansicht mit Balkendiagrammen
 
-![Analyseansicht](screenshots/new1.png)
+![Analyseansicht](screenshots/new2.png)
 
 
