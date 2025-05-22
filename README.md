@@ -11,7 +11,7 @@ This repository contains the source code of a tool developed as part of a Bachel
 - Unterstützte Formate / Supported formats: `.graphml`, `.xml`, `.cch`, `.txt`
 - Netzwerkmetriken / Network metrics: Degree, Betweenness, Density, Connectivity, Periphery, etc.
 - HCI-basiertes GUI-Design / HCI-based GUI design (Dark/Light mode, tooltips, feedback indicators)
-- Exportformate / Export options: JSON, CSV, PDF
+- Exportformate / Export options: JSON, CSV, PNG
 - SQLite-Datenbank / SQLite-based data storage
 - Evaluation: Usability-Tests und heuristische Analyse (SUS-Score: 78,5) / Evaluation: Usability tests and heuristic analysis (SUS score: 78.5)
 
@@ -56,7 +56,8 @@ Die Umgebung heißt standardmäßig `myenv`. / The default environment name is `
 python start.py
 ```
 
-Das Tool startet im GUI-Modus mit Zugriff auf die beiden Hauptmodule. / The application starts in GUI mode and provides access to the two main modules.
+Das Tool startet im GUI-Modus mit Zugriff auf die beiden Hauptmodule. / The application starts in GUI mode and provides access to the two main modules : single graph analysis and dataset analysis.
+
 
 ---
 
